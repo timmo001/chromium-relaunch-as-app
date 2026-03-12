@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Relaunch As App</title>
+    <link rel="stylesheet" href="popup.css">
+    <script src="popup.js" defer></script>
+  </head>
+  <body>
+    <main class="panel">
+      <p class="eyebrow">Omarchy launcher</p>
+      <h1>Relaunch As App</h1>
+
+      <section class="card">
+        <p class="label">Current page</p>
+        <h2 id="page-title">Checking active tab...</h2>
+        <p id="page-url" class="url">Open a normal web page to enable launching.</p>
+      </section>
+
+      <form id="launch-form" hidden>
+        <label class="toggle" for="close-tab">
+          <input id="close-tab" type="checkbox" checked>
+          <span>Close this tab after launch</span>
+        </label>
+
+        <button id="launch-button" type="submit" disabled>Relaunch as App</button>
+      </form>
+
+      <p id="status" class="status" aria-live="polite">Loading current tab...</p>
+    </main>
+  </body>
+</html>
