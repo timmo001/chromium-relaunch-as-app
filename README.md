@@ -25,6 +25,7 @@ Small Manifest V3 extension that launches the current page in an app window by c
 
 ## Notes
 
-- The popup only enables launching for `http` and `https` pages.
+- The popup and page context menu only enable launching for `http` and `https` pages.
+- Launching from the page context menu closes the current tab after the app window opens.
 - The extension uses a fixed public key in `extension/manifest.json`, so the unpacked extension ID stays stable for the native host.
 - If you move this repository, rerun `./scripts/install-native-host.sh ...` so the native host manifest points at the new absolute path.

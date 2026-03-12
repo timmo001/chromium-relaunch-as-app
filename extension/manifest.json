@@ -3,7 +3,10 @@
   "name": "Relaunch As App",
   "version": "0.1.0",
   "description": "Launch the current page in an app window via omarchy-launch-webapp.",
-  "permissions": ["activeTab", "nativeMessaging"],
+  "permissions": ["activeTab", "contextMenus", "nativeMessaging", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
