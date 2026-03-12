@@ -1,5 +1,6 @@
 const HOST_NAME = "dev.omarchy.relaunch_as_app";
 const MENU_ID = "relaunch-as-app";
+const MENU_TITLE = "Show page as app/tab";
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
 
 function ensureContextMenu() {
@@ -7,7 +8,7 @@ function ensureContextMenu() {
     chrome.contextMenus.create(
       {
         id: MENU_ID,
-        title: "Relaunch This Page as App",
+        title: MENU_TITLE,
         contexts: ["page", "frame", "selection", "link", "editable", "image", "video", "audio"],
         documentUrlPatterns: ["http://*/*", "https://*/*"]
       },
@@ -18,6 +19,43 @@ function ensureContextMenu() {
       }
     );
   });
+}
+
+async function getContextAction(tab) {
+  if (typeof tab?.windowId !== "number") {
+    return "launchAsApp";
+  }
+
+  try {
+    const currentWindow = await chrome.windows.get(tab.windowId);
+    return currentWindow.type === "normal" ? "launchAsApp" : "reopenInBrowser";
+  } catch (error) {
+    console.error("Failed to inspect the current window.", error);
+    return "launchAsApp";
+  }
+}
+
+async function reopenInBrowserTab(url) {
+  const normalWindows = await chrome.windows.getAll({ windowTypes: ["normal"] });
+  const targetWindow = normalWindows.find((windowInfo) => windowInfo.focused) || normalWindows[0];
+
+  if (typeof targetWindow?.id === "number") {
+    await chrome.tabs.create({
+      active: true,
+      url,
+      windowId: targetWindow.id
+    });
+    await chrome.windows.update(targetWindow.id, { focused: true });
+    return;
+  }
+
+  await chrome.windows.create({ focused: true, url });
+}
+
+async function closeTab(tab) {
+  if (typeof tab?.id === "number") {
+    await chrome.tabs.remove(tab.id);
+  }
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -47,6 +85,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       return;
     }
 
+    const action = await getContextAction(tab);
+
+    if (action === "reopenInBrowser") {
+      await reopenInBrowserTab(parsedUrl.href);
+      await closeTab(tab);
+      return;
+    }
+
     const response = await chrome.runtime.sendNativeMessage(HOST_NAME, {
       url: parsedUrl.href
     });
@@ -55,9 +101,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       throw new Error(response?.error || "The native host did not confirm launch.");
     }
 
-    if (typeof tab?.id === "number") {
-      await chrome.tabs.remove(tab.id);
-    }
+    await closeTab(tab);
   } catch (error) {
     console.error("Failed to relaunch page as app from the context menu.", error);
   }
