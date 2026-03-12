@@ -4,9 +4,20 @@
   "version": "0.1.0",
   "description": "Launch the current page in an app window via omarchy-launch-webapp.",
   "permissions": ["activeTab", "nativeMessaging"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_title": "Relaunch current page as app",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvOdUisQhe14H59EUK9+pdOQa7MOuVaT7x7Kl4XU85W7iIgVW8cnpa/QhPc0GrQ9sheAhOPlwcQYhUi7tte3eeFsO2nTP+UrA38LXZIvZp1lvPnoGV1okwZEJTTdijj7uPwEVBZ+Mbi28gqPk5aLhu0vgiz98wZG4Xdy+elTwUadfSAr9gBvcdIuTzLPJGbVQoJ4+MfjB2oukC5l2CVIZ/1m0TBBTccAwJyZgtGQ4svimJnjpMM9quv42dm99mPhkNu4jxST1dkijYjaWYqYYxXk4waRIZpyXGpLJihwJ2PQlfSIbksfNqevShfkpMLV78QGruN1AyUvyf/IdW5fveQIDAQAB"
 }
