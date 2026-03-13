@@ -1,5 +1,8 @@
 # Chromium Relaunch As App
 
+> [!NOTE]
+> This extension is built for [Omarchy](https://omarchy.org) users. It relies on the `omarchy-launch-webapp` command that ships with Omarchy.
+
 Small Manifest V3 extension that launches the current page in an app window by calling `omarchy-launch-webapp --app "URL"` through a native messaging host.
 
 ## Files
