@@ -13,6 +13,14 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "commands": {
+    "toggle-relaunch": {
+      "suggested_key": {
+        "default": "Shift+Alt+R"
+      },
+      "description": "Toggle page between app window and browser tab"
+    }
+  },
   "action": {
     "default_title": "Relaunch current page as app",
     "default_popup": "popup.html",

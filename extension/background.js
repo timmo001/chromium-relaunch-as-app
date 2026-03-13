@@ -66,15 +66,9 @@ chrome.runtime.onStartup.addListener(() => {
   ensureContextMenu();
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== MENU_ID) {
-    return;
-  }
-
-  const url = info.pageUrl || tab?.url;
-
+async function toggleRelaunch(url, tab, source) {
   if (!url) {
-    console.error("No page URL was available for context-menu launch.");
+    console.error(`No page URL was available for ${source} launch.`);
     return;
   }
 
@@ -103,6 +97,25 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
     await closeTab(tab);
   } catch (error) {
-    console.error("Failed to relaunch page as app from the context menu.", error);
+    console.error(`Failed to relaunch page as app via ${source}.`, error);
   }
+}
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== MENU_ID) {
+    return;
+  }
+
+  const url = info.pageUrl || tab?.url;
+  await toggleRelaunch(url, tab, "context menu");
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "toggle-relaunch") {
+    return;
+  }
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = tab?.url;
+  await toggleRelaunch(url, tab, "keyboard shortcut");
 });
