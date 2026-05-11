@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
-host_name="dev.omarchy.relaunch_as_app"
+relaunch_host_name="dev.omarchy.relaunch_as_app"
+urls_host_name="dev.omarchy.browser_urls"
 extension_id="gmbhiemgnkapbblhoipdeiemfacjjoch"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 repo_root=$(dirname "$script_dir")
-host_path="$repo_root/native_host/relaunch_current_page_host.py"
+relaunch_host_path="$repo_root/native_host/relaunch_current_page_host.py"
+urls_host_path="$repo_root/native_host/browser_urls_host.py"
 browser="${1:-chromium}"
 
 native_host_dir() {
@@ -22,13 +24,16 @@ native_host_dir() {
 }
 
 write_manifest() {
-  target_dir="$1"
+  local target_dir="$1"
+  local host_name="$2"
+  local host_path="$3"
+  local description="$4"
   mkdir -p "$target_dir"
 
   cat >"$target_dir/$host_name.json" <<EOF
 {
   "name": "$host_name",
-  "description": "Launch the current page in an app window via omarchy-launch-webapp.",
+  "description": "$description",
   "path": "$host_path",
   "type": "stdio",
   "allowed_origins": [
@@ -38,17 +43,29 @@ write_manifest() {
 EOF
 }
 
-if [[ ! -f "$host_path" ]]; then
-  printf 'Native host script not found: %s\n' "$host_path" >&2
-  exit 1
-fi
+install_for_browser() {
+  local target_dir="$1"
+  local browser_name="$2"
 
-chmod +x "$host_path"
+  write_manifest "$target_dir" "$relaunch_host_name" "$relaunch_host_path" \
+    "Launch the current page in an app window via omarchy-launch-webapp."
+  write_manifest "$target_dir" "$urls_host_name" "$urls_host_path" \
+    "Track open tab URLs for external tools."
+
+  printf 'Installed native host manifests for %s\n' "$browser_name"
+}
+
+for path in "$relaunch_host_path" "$urls_host_path"; do
+  if [[ ! -f "$path" ]]; then
+    printf 'Native host script not found: %s\n' "$path" >&2
+    exit 1
+  fi
+  chmod +x "$path"
+done
 
 if [[ "$browser" == "all" ]]; then
   for name in chromium chrome brave edge vivaldi; do
-    write_manifest "$(native_host_dir "$name")"
-    printf 'Installed native host manifest for %s\n' "$name"
+    install_for_browser "$(native_host_dir "$name")" "$name"
   done
 else
   target_dir=$(native_host_dir "$browser") || {
@@ -56,8 +73,7 @@ else
     exit 1
   }
 
-  write_manifest "$target_dir"
-  printf 'Installed native host manifest for %s\n' "$browser"
+  install_for_browser "$target_dir" "$browser"
 fi
 
 printf 'Load the unpacked extension from %s/extension\n' "$repo_root"

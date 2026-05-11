@@ -1,7 +1,9 @@
 const HOST_NAME = "dev.omarchy.relaunch_as_app";
+const URLS_HOST_NAME = "dev.omarchy.browser_urls";
 const MENU_ID = "relaunch-as-app";
 const MENU_TITLE = "Show page as app/tab";
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
+const URLS_RECONNECT_DELAY_MS = 5000;
 
 function ensureContextMenu() {
   chrome.contextMenus.removeAll(() => {
@@ -119,3 +121,65 @@ chrome.commands.onCommand.addListener(async (command) => {
   const url = tab?.url;
   await toggleRelaunch(url, tab, "keyboard shortcut");
 });
+
+// --- Browser URL tracking ---
+// Sends all open tab URLs to a persistent native messaging host so
+// external tools (e.g. workspace-capture) can read real URLs.
+
+let urlsPort = null;
+
+function sendUrlState() {
+  chrome.windows.getAll({ populate: true }, (windows) => {
+    const data = [];
+    for (const win of windows) {
+      for (const tab of win.tabs || []) {
+        data.push({
+          windowId: win.id,
+          title: tab.title || "",
+          url: tab.url || "",
+          active: tab.active,
+        });
+      }
+    }
+
+    if (urlsPort) {
+      try {
+        urlsPort.postMessage(data);
+      } catch (_) {
+        connectUrlsHost();
+      }
+    }
+  });
+}
+
+function connectUrlsHost() {
+  if (urlsPort) {
+    try {
+      urlsPort.disconnect();
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  try {
+    urlsPort = chrome.runtime.connectNative(URLS_HOST_NAME);
+  } catch (_) {
+    setTimeout(connectUrlsHost, URLS_RECONNECT_DELAY_MS);
+    return;
+  }
+
+  urlsPort.onDisconnect.addListener(() => {
+    urlsPort = null;
+    setTimeout(connectUrlsHost, URLS_RECONNECT_DELAY_MS);
+  });
+
+  sendUrlState();
+}
+
+chrome.tabs.onUpdated.addListener(sendUrlState);
+chrome.tabs.onRemoved.addListener(sendUrlState);
+chrome.tabs.onCreated.addListener(sendUrlState);
+chrome.windows.onCreated.addListener(sendUrlState);
+chrome.windows.onRemoved.addListener(sendUrlState);
+
+connectUrlsHost();
