@@ -1,0 +1,14 @@
+---
+name: Build
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: timmo001/workflows/.github/workflows/build-pnpm.yml@55c7e33ad32c1f449394d11f4889680218fb28aa # master

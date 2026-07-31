@@ -1,0 +1,17 @@
+[tools]
+node = "26.5.1"
+"npm:pnpm" = "11.18.0"
+
+[tasks.install]
+run = "pnpm install --frozen-lockfile"
+
+[tasks.typecheck]
+depends = ["install"]
+run = "pnpm typecheck"
+
+[tasks.build]
+depends = ["typecheck"]
+run = "pnpm build"
+
+[tasks.check]
+depends = ["typecheck", "build"]

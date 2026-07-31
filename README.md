@@ -8,12 +8,19 @@ Small Manifest V3 extension that launches the current page in an app window by c
 ## Files
 
 - `extension/` - unpacked Chrome/Chromium extension
+- `src/` - strict TypeScript source compiled into `extension/`
 - `native_host/` - Python native messaging host that spawns `omarchy-launch-webapp`
 - `scripts/install-native-host.sh` - installs the native host manifest for a browser profile
 
 ## Install
 
-1. Install the native host manifest for your browser:
+1. Build the extension:
+
+   ```bash
+   mise run build
+   ```
+
+2. Install the native host manifest for your browser:
 
    ```bash
    ./scripts/install-native-host.sh chromium
@@ -21,10 +28,10 @@ Small Manifest V3 extension that launches the current page in an app window by c
 
    Supported values: `chromium`, `chrome`, `brave`, `edge`, `vivaldi`, `all`
 
-2. Open `chrome://extensions` or `chromium://extensions`.
-3. Enable Developer mode.
-4. Click Load unpacked and choose `extension/`.
-5. Pin the extension if you want one-click access.
+3. Open `chrome://extensions` or `chromium://extensions`.
+4. Enable Developer mode.
+5. Click Load unpacked and choose `extension/`.
+6. Pin the extension if you want one-click access.
 
 ## Notes
 
@@ -33,3 +40,4 @@ Small Manifest V3 extension that launches the current page in an app window by c
 - In app-style windows, the page context menu flips to reopening the page in a normal browser tab instead.
 - The extension uses a fixed public key in `extension/manifest.json`, so the unpacked extension ID stays stable for the native host.
 - If you move this repository, rerun `./scripts/install-native-host.sh ...` so the native host manifest points at the new absolute path.
+- Generated JavaScript under `extension/dist/` is ignored. Run `mise run check` to type-check and rebuild it.
