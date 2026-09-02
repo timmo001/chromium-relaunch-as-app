@@ -3,15 +3,33 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "bun@1.4.0",
   "scripts": {
-    "build": "esbuild src/background.ts src/popup.ts --bundle --format=iife --outdir=extension/dist",
-    "check": "pnpm typecheck && pnpm build",
-    "typecheck": "tsc --noEmit"
+    "build": "bun run build:extension && bun run build:native",
+    "build:extension": "bun build src/background.ts src/popup.ts --target=browser --format=iife --outdir=extension/dist",
+    "build:native": "mkdir -p dist && bun build src/native/relaunch-host.ts --compile --outfile dist/relaunch-current-page-host && bun build src/native/browser-urls-host.ts --compile --outfile dist/browser-urls-host && bun build src/native/install-native-host.ts --compile --outfile dist/install-native-host",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run format:check && bun run build",
+    "format": "prettier --write \"{src,tests}/**/*.ts\" oxlint.config.ts package.json tsconfig.json",
+    "format:check": "prettier --check \"{src,tests}/**/*.ts\" oxlint.config.ts package.json tsconfig.json",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepare": "effect-tsgo patch"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-rc.112",
+    "effect": "4.0.0-rc.112"
   },
   "devDependencies": {
+    "@effect/tsgo": "0.39.0",
+    "@effect/vitest": "4.0.0-rc.112",
+    "@oxlint/plugins": "1.81.0",
+    "@timmo001/oxlint-rules": "0.3.0",
+    "@types/bun": "1.4.0",
     "@types/chrome": "0.2.2",
-    "esbuild": "0.28.1",
-    "typescript": "7.0.2"
+    "oxlint": "1.81.0",
+    "prettier": "3.5.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
   }
 }

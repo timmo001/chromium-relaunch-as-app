@@ -1,10 +1,7 @@
-const HOST_NAME = "dev.omarchy.relaunch_as_app";
-const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
+import { NativeResponse, RELAUNCH_HOST_NAME } from "./protocol.js";
 
-interface NativeResponse {
-  readonly ok: boolean;
-  readonly error?: string;
-}
+const HOST_NAME = RELAUNCH_HOST_NAME;
+const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
 
 let activeTab: chrome.tabs.Tab | null = null;
 
@@ -46,7 +43,10 @@ async function initializePopup(): Promise<void> {
   const form = element("launch-form", HTMLFormElement);
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
     activeTab = tab ?? null;
 
     if (!activeTab?.url) {
@@ -67,7 +67,10 @@ async function initializePopup(): Promise<void> {
     button.disabled = false;
     setStatus("Ready to launch.");
   } catch (error: unknown) {
-    setStatus(getErrorMessage(error, "Failed to inspect the active tab."), true);
+    setStatus(
+      getErrorMessage(error, "Failed to inspect the active tab."),
+      true,
+    );
   }
 }
 
@@ -85,16 +88,16 @@ async function handleLaunch(event: SubmitEvent): Promise<void> {
   setStatus("Launching app window...");
 
   try {
-    const response: unknown = await chrome.runtime.sendNativeMessage(HOST_NAME, {
-      url: activeTab.url,
-    });
-    if (!isNativeResponse(response) || !response.ok) {
-      throw new Error(
-        isNativeResponse(response) && response.error
-          ? response.error
-          : "The native host did not confirm launch.",
-      );
+    const response: unknown = await chrome.runtime.sendNativeMessage(
+      HOST_NAME,
+      {
+        url: activeTab.url,
+      },
+    );
+    if (!isNativeResponse(response)) {
+      throw new Error("The native host did not confirm launch.");
     }
+    if (!response.ok) throw new Error(response.error);
 
     if (closeTab.checked && typeof activeTab.id === "number") {
       await chrome.tabs.remove(activeTab.id);
@@ -112,8 +115,11 @@ async function handleLaunch(event: SubmitEvent): Promise<void> {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  element("launch-form", HTMLFormElement).addEventListener("submit", (event) => {
-    void handleLaunch(event);
-  });
+  element("launch-form", HTMLFormElement).addEventListener(
+    "submit",
+    (event) => {
+      void handleLaunch(event);
+    },
+  );
   void initializePopup();
 });

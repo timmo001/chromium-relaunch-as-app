@@ -1,17 +1,34 @@
 [tools]
-node = "26.5.1"
-"npm:pnpm" = "11.18.0"
+bun = "1.4.0"
+node = "26.8.1"
 
 [tasks.install]
-run = "pnpm install --frozen-lockfile"
+run = "bun install --frozen-lockfile"
+
+[tasks.lint]
+depends = ["install"]
+run = "bun run lint"
 
 [tasks.typecheck]
 depends = ["install"]
-run = "pnpm typecheck"
+run = "bun run typecheck"
 
 [tasks.build]
 depends = ["typecheck"]
-run = "pnpm build"
+run = "bun run build"
+
+[tasks.test]
+depends = ["install"]
+run = "bun run test"
+
+[tasks.format]
+depends = ["install"]
+run = "bun run format"
+
+[tasks."format:check"]
+depends = ["install"]
+run = "bun run format:check"
 
 [tasks.check]
-depends = ["typecheck", "build"]
+depends = ["install"]
+run = "bun run check"

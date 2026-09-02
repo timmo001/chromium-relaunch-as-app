@@ -1,5 +1,12 @@
-const HOST_NAME = "dev.omarchy.relaunch_as_app";
-const URLS_HOST_NAME = "dev.omarchy.browser_urls";
+import {
+  BROWSER_URLS_HOST_NAME,
+  BrowserTabState,
+  NativeResponse,
+  RELAUNCH_HOST_NAME,
+} from "./protocol.js";
+
+const HOST_NAME = RELAUNCH_HOST_NAME;
+const URLS_HOST_NAME = BROWSER_URLS_HOST_NAME;
 const MENU_ID = "relaunch-as-app";
 const MENU_TITLE = "Show page as app/tab";
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
@@ -7,18 +14,6 @@ const URLS_RECONNECT_DELAY_MS = 5000;
 
 type ContextAction = "launchAsApp" | "reopenInBrowser";
 type RelaunchSource = "context menu" | "keyboard shortcut";
-
-interface NativeResponse {
-  readonly ok: boolean;
-  readonly error?: string;
-}
-
-interface BrowserTabState {
-  readonly windowId: number | undefined;
-  readonly title: string;
-  readonly url: string;
-  readonly active: boolean;
-}
 
 function isNativeResponse(value: unknown): value is NativeResponse {
   return (
@@ -73,7 +68,9 @@ async function getContextAction(tab?: chrome.tabs.Tab): Promise<ContextAction> {
 }
 
 async function reopenInBrowserTab(url: string): Promise<void> {
-  const normalWindows = await chrome.windows.getAll({ windowTypes: ["normal"] });
+  const normalWindows = await chrome.windows.getAll({
+    windowTypes: ["normal"],
+  });
   const targetWindow =
     normalWindows.find((windowInfo) => windowInfo.focused) ?? normalWindows[0];
 
@@ -110,16 +107,16 @@ async function toggleRelaunch(
       return;
     }
 
-    const response: unknown = await chrome.runtime.sendNativeMessage(HOST_NAME, {
-      url: parsedUrl.href,
-    });
-    if (!isNativeResponse(response) || !response.ok) {
-      throw new Error(
-        isNativeResponse(response) && response.error
-          ? response.error
-          : "The native host did not confirm launch.",
-      );
+    const response: unknown = await chrome.runtime.sendNativeMessage(
+      HOST_NAME,
+      {
+        url: parsedUrl.href,
+      },
+    );
+    if (!isNativeResponse(response)) {
+      throw new Error("The native host did not confirm launch.");
     }
+    if (!response.ok) throw new Error(response.error);
 
     await closeTab(tab);
   } catch (error: unknown) {
@@ -147,12 +144,16 @@ let urlsPort: chrome.runtime.Port | null = null;
 function sendUrlState(): void {
   chrome.windows.getAll({ populate: true }, (windows) => {
     const data: BrowserTabState[] = windows.flatMap((windowInfo) =>
-      (windowInfo.tabs ?? []).map((tab) => ({
-        windowId: windowInfo.id,
-        title: tab.title ?? "",
-        url: tab.url ?? "",
-        active: tab.active,
-      })),
+      (windowInfo.tabs ?? []).map((tab) => {
+        const state = {
+          title: tab.title ?? "",
+          url: tab.url ?? "",
+          active: tab.active,
+        };
+        return windowInfo.id === undefined
+          ? state
+          : { ...state, windowId: windowInfo.id };
+      }),
     );
 
     if (!urlsPort) return;
