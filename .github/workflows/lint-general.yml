@@ -11,4 +11,5 @@ on:
 
 jobs:
   lint:
-    uses: timmo001/workflows/.github/workflows/lint-general.yml@bb2645bb83532b44ccc6d9657324eb97715df485 # master
+    # yamllint disable-line rule:line-length
+    uses: timmo001/workflows/.github/workflows/lint-general.yml@bb2645bb83532b44ccc6d9657324eb97715df485  # master
