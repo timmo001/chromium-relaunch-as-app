@@ -12,7 +12,7 @@
         "@effect/tsgo": "0.39.0",
         "@effect/vitest": "4.0.0-rc.112",
         "@oxlint/plugins": "1.83.0",
-        "@timmo001/oxlint-rules": "0.3.0",
+        "@timmo001/oxlint-rules": "0.3.4",
         "@types/bun": "1.4.0",
         "@types/chrome": "0.2.2",
         "oxlint": "1.83.0",
@@ -135,7 +135,7 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@timmo001/oxlint-rules": ["@timmo001/oxlint-rules@0.3.0", "", { "peerDependencies": { "@oxlint/plugins": "1.81.0", "oxlint": "1.81.0" }, "bin": { "oxlint-rules": "dist/cli.js" } }, "sha512-TvpyUOFeQFfiLXYkFWFI7a4H6LXc/T0ILqP9w8VxBxldauATVsePddgN+rA4Ks2n63d8pkLBWedgfeVBx+8o/Q=="],
+    "@timmo001/oxlint-rules": ["@timmo001/oxlint-rules@0.3.4", "", { "peerDependencies": { "@oxlint/plugins": "1.83.0", "oxlint": "1.83.0" }, "bin": { "oxlint-rules": "dist/cli.js" } }, "sha512-m+zHYrtsJB+THRxYv0CR3EfOsFpa1g5CJraNDhHqBY0VXYkXoqQSkwbNG+iiW6GL9QOaVAKUvHrsTwud/TSOXg=="],
 
     "@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
 

@@ -31,6 +31,7 @@ export const decodeLaunchUrl = Effect.fn("Protocol.decodeLaunchUrl")(function* (
         }),
     ),
   );
+
   const parsed = yield* Effect.try({
     try: () => new URL(request.url),
     catch: () => new InvalidUrl({ message: "URL is invalid" }),

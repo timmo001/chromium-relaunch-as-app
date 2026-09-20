@@ -23,11 +23,13 @@ import {
 describe("native host installer", () => {
   it.effect("installs and uninstalls every maintained browser manifest", () => {
     const root = mkdtempSync(join(tmpdir(), "native-installer-"));
+
     const paths = {
       configHome: join(root, "config"),
       dataHome: join(root, "data"),
       artifactDirectory: join(root, "artifacts"),
     };
+
     writeFileSync(join(root, "unrelated"), "keep");
     mkdirSync(paths.artifactDirectory, { recursive: true });
     writeFileSync(
@@ -46,16 +48,19 @@ describe("native host installer", () => {
         "microsoft-edge",
         "vivaldi",
       ];
+
       for (const browser of browserDirectories) {
         const directory = join(
           paths.configHome,
           browser,
           "NativeMessagingHosts",
         );
+
         for (const name of [RELAUNCH_HOST_NAME, BROWSER_URLS_HOST_NAME]) {
           const manifest: unknown = JSON.parse(
             readFileSync(join(directory, `${name}.json`), "utf8"),
           );
+
           expect(manifest).toMatchObject({
             name,
             type: "stdio",
@@ -79,6 +84,7 @@ describe("native host installer", () => {
 
   it.effect("fails when built host artifacts are missing", () => {
     const root = mkdtempSync(join(tmpdir(), "native-installer-missing-"));
+
     const paths = {
       configHome: join(root, "config"),
       dataHome: join(root, "data"),
@@ -89,6 +95,7 @@ describe("native host installer", () => {
       const error = yield* installNativeHosts("chromium", paths).pipe(
         Effect.flip,
       );
+
       expect(error._tag).toBe("InstallerError");
     }).pipe(
       Effect.ensuring(

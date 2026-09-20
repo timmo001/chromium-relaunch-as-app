@@ -24,6 +24,7 @@ function framed(
   const frame = new Uint8Array(4 + payload.byteLength);
   new DataView(frame.buffer).setUint32(0, declaredLength, littleEndian);
   frame.set(payload, 4);
+
   return frame;
 }
 
@@ -35,6 +36,7 @@ function withInput<A, E>(
   const path = join(directory, "input");
   writeFileSync(path, bytes);
   const fileDescriptor = openSync(path, "r");
+
   return use(fileDescriptor).pipe(
     Effect.ensuring(
       Effect.sync(() => {
@@ -71,6 +73,7 @@ describe("native messaging framing", () => {
         new Uint8Array([1, 0, 0]),
         (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
       );
+
       expect(headerError._tag).toBe("NativeMessageError");
       expect(headerError.message).toBe("Native message is truncated");
 
@@ -78,6 +81,7 @@ describe("native messaging framing", () => {
         framed(new TextEncoder().encode("{}"), 8),
         (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
       );
+
       expect(payloadError.message).toBe("Native message is truncated");
     }),
   );
@@ -87,18 +91,21 @@ describe("native messaging framing", () => {
       const zero = yield* withInput(framed(new Uint8Array(), 0), (descriptor) =>
         readNativeMessage(descriptor).pipe(Effect.flip),
       );
+
       expect(zero.message).toContain("cannot be empty");
 
       const oversized = yield* withInput(
         framed(new Uint8Array(), MAX_INBOUND_MESSAGE_BYTES + 1),
         (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
       );
+
       expect(oversized.message).toContain("exceeds");
 
       const malformed = yield* withInput(
         framed(new TextEncoder().encode("{")),
         (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
       );
+
       expect(malformed.message).toBe("Native message is not valid JSON");
     }),
   );
@@ -108,6 +115,7 @@ describe("native messaging framing", () => {
       const error = yield* encodeNativeMessage("x".repeat(1024 * 1024)).pipe(
         Effect.flip,
       );
+
       expect(error.message).toContain("1048576");
     }),
   );

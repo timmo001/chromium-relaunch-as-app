@@ -34,6 +34,7 @@ const browsers: ReadonlyArray<Browser> = [
 ];
 
 type Browser = keyof typeof browserDirectories;
+
 type Action = "install" | "update" | "uninstall";
 
 const hostFiles = [
@@ -78,6 +79,7 @@ function selectedBrowsers(browser: Browser | "all"): ReadonlyArray<Browser> {
 
 function atomicCopy(source: string, destination: string): void {
   const temporary = `${destination}.${process.pid}.tmp`;
+
   try {
     copyFileSync(source, temporary);
     chmodSync(temporary, 0o755);
@@ -98,6 +100,7 @@ interface NativeHostManifest {
 
 function atomicWriteJson(destination: string, value: NativeHostManifest): void {
   const temporary = `${destination}.${process.pid}.tmp`;
+
   try {
     writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
       mode: 0o644,
@@ -118,13 +121,16 @@ export const installNativeHosts = Effect.fn("NativeHostInstaller.install")(
           paths.dataHome,
           "chromium-relaunch-as-app/native-hosts",
         );
+
         mkdirSync(installDirectory, { recursive: true });
 
         for (const host of hostFiles) {
           const source = join(paths.artifactDirectory, host.executable);
+
           if (!existsSync(source)) {
             throw new Error(`Built native host not found: ${source}`);
           }
+
           atomicCopy(source, join(installDirectory, host.executable));
         }
 
@@ -133,7 +139,9 @@ export const installNativeHosts = Effect.fn("NativeHostInstaller.install")(
             paths.configHome,
             browserDirectories[selected],
           );
+
           mkdirSync(manifestDirectory, { recursive: true });
+
           for (const host of hostFiles) {
             atomicWriteJson(join(manifestDirectory, `${host.name}.json`), {
               name: host.name,
@@ -163,6 +171,7 @@ export const uninstallNativeHosts = Effect.fn("NativeHostInstaller.uninstall")(
             paths.configHome,
             browserDirectories[selected],
           );
+
           for (const host of hostFiles) {
             rmSync(join(manifestDirectory, `${host.name}.json`), {
               force: true,
@@ -178,6 +187,7 @@ export const uninstallNativeHosts = Effect.fn("NativeHostInstaller.uninstall")(
               ),
             ),
         );
+
         if (!manifestsRemain) {
           rmSync(join(paths.dataHome, "chromium-relaunch-as-app"), {
             recursive: true,
@@ -205,9 +215,11 @@ function parseArguments(args: ReadonlyArray<string>):
 
   const action = args[0] ?? "install";
   const browser = args[1] ?? "chromium";
+
   if (action !== "install" && action !== "update" && action !== "uninstall") {
     throw new Error(`Unsupported action: ${action}`);
   }
+
   switch (browser) {
     case "all":
     case "chromium":
@@ -232,10 +244,12 @@ if (import.meta.main) {
   }).pipe(
     Effect.flatMap((arguments_) => {
       if (arguments_.help) return Effect.sync(() => console.log(usage()));
+
       const operation =
         arguments_.action === "uninstall"
           ? uninstallNativeHosts(arguments_.browser)
           : installNativeHosts(arguments_.browser);
+
       return operation.pipe(
         Effect.tap(() =>
           Effect.sync(() =>
