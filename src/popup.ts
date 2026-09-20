@@ -1,6 +1,7 @@
 import { NativeResponse, RELAUNCH_HOST_NAME } from "./protocol.js";
 
 const HOST_NAME = RELAUNCH_HOST_NAME;
+
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
 
 let activeTab: chrome.tabs.Tab | null = null;
@@ -10,9 +11,11 @@ function element<T extends HTMLElement>(
   constructor: abstract new (...args: never[]) => T,
 ): T {
   const value = document.getElementById(id);
+
   if (!(value instanceof constructor)) {
     throw new Error(`Missing or invalid element: #${id}`);
   }
+
   return value;
 }
 
@@ -47,10 +50,12 @@ async function initializePopup(): Promise<void> {
       active: true,
       currentWindow: true,
     });
+
     activeTab = tab ?? null;
 
     if (!activeTab?.url) {
       setStatus("This page does not expose a launchable URL.", true);
+
       return;
     }
 
@@ -60,6 +65,7 @@ async function initializePopup(): Promise<void> {
 
     if (!SUPPORTED_PROTOCOLS.has(parsedUrl.protocol)) {
       setStatus("Only http and https pages can be launched as apps.", true);
+
       return;
     }
 
@@ -81,6 +87,7 @@ async function handleLaunch(event: SubmitEvent): Promise<void> {
 
   if (!activeTab?.url) {
     setStatus("No active tab URL is available.", true);
+
     return;
   }
 
@@ -94,14 +101,17 @@ async function handleLaunch(event: SubmitEvent): Promise<void> {
         url: activeTab.url,
       },
     );
+
     if (!isNativeResponse(response)) {
       throw new Error("The native host did not confirm launch.");
     }
+
     if (!response.ok) throw new Error(response.error);
 
     if (closeTab.checked && typeof activeTab.id === "number") {
       await chrome.tabs.remove(activeTab.id);
       window.close();
+
       return;
     }
 

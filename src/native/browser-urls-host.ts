@@ -32,6 +32,7 @@ export function defaultStateFile(): string {
 export const writeBrowserState = Effect.fn("BrowserUrlsHost.writeState")(
   function* (snapshot: ReadonlyArray<unknown>, stateFile = defaultStateFile()) {
     const directory = dirname(stateFile);
+
     const temporary = join(
       directory,
       `.browser-urls.${process.pid}.${randomUUID()}.tmp`,
@@ -41,11 +42,13 @@ export const writeBrowserState = Effect.fn("BrowserUrlsHost.writeState")(
       try: () => {
         mkdirSync(directory, { recursive: true });
         const descriptor = openSync(temporary, "wx", 0o600);
+
         try {
           writeFileSync(descriptor, `${JSON.stringify(snapshot, null, 2)}\n`);
         } finally {
           closeSync(descriptor);
         }
+
         renameSync(temporary, stateFile);
       },
       catch: (cause) => {
@@ -54,6 +57,7 @@ export const writeBrowserState = Effect.fn("BrowserUrlsHost.writeState")(
         } catch {
           // Preserve the original persistence failure.
         }
+
         return new StateWriteError({
           message: "Failed to persist browser URL state",
           cause,
@@ -68,7 +72,9 @@ export const runBrowserUrlsHost = Effect.fn("BrowserUrlsHost.run")(function* (
 ) {
   while (true) {
     const message = yield* readNativeMessage();
+
     if (message === null) return;
+
     const snapshot = yield* Schema.decodeUnknownEffect(BrowserTabStateSnapshot)(
       message,
     ).pipe(
@@ -80,6 +86,7 @@ export const runBrowserUrlsHost = Effect.fn("BrowserUrlsHost.run")(function* (
           }),
       ),
     );
+
     yield* writeBrowserState(snapshot, stateFile);
   }
 });

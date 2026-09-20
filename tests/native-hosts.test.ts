@@ -24,6 +24,7 @@ describe("relaunch host", () => {
       const file = yield* decodeLaunchUrl({ url: "file:///tmp/example" }).pipe(
         Effect.flip,
       );
+
       expect(file.message).toContain("http and https");
     }),
   );
@@ -34,6 +35,7 @@ describe("relaunch host", () => {
         "/path/that/does/not/exist/omarchy-launch-webapp",
         "https://example.com/",
       ).pipe(Effect.flip);
+
       expect(error._tag).toBe("LaunchError");
     }),
   );
@@ -82,6 +84,7 @@ describe("browser URL state", () => {
         [],
         join(blockedParent, "state.json"),
       ).pipe(Effect.flip);
+
       expect(error._tag).toBe("StateWriteError");
       expect(readFileSync(blockedParent, "utf8")).toBe("existing");
     }).pipe(

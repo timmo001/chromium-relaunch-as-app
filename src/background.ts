@@ -6,13 +6,19 @@ import {
 } from "./protocol.js";
 
 const HOST_NAME = RELAUNCH_HOST_NAME;
+
 const URLS_HOST_NAME = BROWSER_URLS_HOST_NAME;
+
 const MENU_ID = "relaunch-as-app";
+
 const MENU_TITLE = "Show page as app/tab";
+
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:"]);
+
 const URLS_RECONNECT_DELAY_MS = 5000;
 
 type ContextAction = "launchAsApp" | "reopenInBrowser";
+
 type RelaunchSource = "context menu" | "keyboard shortcut";
 
 function isNativeResponse(value: unknown): value is NativeResponse {
@@ -60,9 +66,11 @@ async function getContextAction(tab?: chrome.tabs.Tab): Promise<ContextAction> {
 
   try {
     const currentWindow = await chrome.windows.get(tab.windowId);
+
     return currentWindow.type === "normal" ? "launchAsApp" : "reopenInBrowser";
   } catch (error: unknown) {
     console.error("Failed to inspect the current window.", error);
+
     return "launchAsApp";
   }
 }
@@ -71,12 +79,14 @@ async function reopenInBrowserTab(url: string): Promise<void> {
   const normalWindows = await chrome.windows.getAll({
     windowTypes: ["normal"],
   });
+
   const targetWindow =
     normalWindows.find((windowInfo) => windowInfo.focused) ?? normalWindows[0];
 
   if (typeof targetWindow?.id === "number") {
     await chrome.tabs.create({ active: true, url, windowId: targetWindow.id });
     await chrome.windows.update(targetWindow.id, { focused: true });
+
     return;
   }
 
@@ -94,16 +104,19 @@ async function toggleRelaunch(
 ): Promise<void> {
   if (!url) {
     console.error(`No page URL was available for ${source} launch.`);
+
     return;
   }
 
   try {
     const parsedUrl = new URL(url);
+
     if (!SUPPORTED_PROTOCOLS.has(parsedUrl.protocol)) return;
 
     if ((await getContextAction(tab)) === "reopenInBrowser") {
       await reopenInBrowserTab(parsedUrl.href);
       await closeTab(tab);
+
       return;
     }
 
@@ -113,9 +126,11 @@ async function toggleRelaunch(
         url: parsedUrl.href,
       },
     );
+
     if (!isNativeResponse(response)) {
       throw new Error("The native host did not confirm launch.");
     }
+
     if (!response.ok) throw new Error(response.error);
 
     await closeTab(tab);
@@ -125,6 +140,7 @@ async function toggleRelaunch(
 }
 
 chrome.runtime.onInstalled.addListener(ensureContextMenu);
+
 chrome.runtime.onStartup.addListener(ensureContextMenu);
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -150,6 +166,7 @@ function sendUrlState(): void {
           url: tab.url ?? "",
           active: tab.active,
         };
+
         return windowInfo.id === undefined
           ? state
           : { ...state, windowId: windowInfo.id };
@@ -157,6 +174,7 @@ function sendUrlState(): void {
     );
 
     if (!urlsPort) return;
+
     try {
       urlsPort.postMessage(data);
     } catch {
@@ -178,6 +196,7 @@ function connectUrlsHost(): void {
     urlsPort = chrome.runtime.connectNative(URLS_HOST_NAME);
   } catch {
     setTimeout(connectUrlsHost, URLS_RECONNECT_DELAY_MS);
+
     return;
   }
 
@@ -189,9 +208,13 @@ function connectUrlsHost(): void {
 }
 
 chrome.tabs.onUpdated.addListener(sendUrlState);
+
 chrome.tabs.onRemoved.addListener(sendUrlState);
+
 chrome.tabs.onCreated.addListener(sendUrlState);
+
 chrome.windows.onCreated.addListener(sendUrlState);
+
 chrome.windows.onRemoved.addListener(sendUrlState);
 
 connectUrlsHost();

@@ -20,6 +20,7 @@ export class LaunchError extends Schema.TaggedError<LaunchError>()(
 
 function executable(path: string | null | undefined): path is string {
   if (!path) return false;
+
   try {
     return statSync(path).isFile() && (accessSync(path, constants.X_OK), true);
   } catch {
@@ -31,6 +32,7 @@ export const resolveLauncher = Effect.fn("RelaunchHost.resolveLauncher")(
   function* () {
     const override = process.env.OMARCHY_LAUNCH_WEBAPP;
     const pathCommand = Bun.which("omarchy-launch-webapp");
+
     const fallback = join(
       homedir(),
       ".local/share/omarchy/bin/omarchy-launch-webapp",
@@ -58,6 +60,7 @@ export const launchUrl = Effect.fn("RelaunchHost.launchUrl")(function* (
         stderr: "ignore",
         detached: true,
       });
+
       subprocess.unref();
     },
     catch: (cause) =>
@@ -67,9 +70,11 @@ export const launchUrl = Effect.fn("RelaunchHost.launchUrl")(function* (
 
 export const runRelaunchHost = Effect.fn("RelaunchHost.run")(function* () {
   const request = yield* readNativeMessage();
+
   if (request === null) {
     return yield* new LaunchError({ message: "No native message received" });
   }
+
   const url = yield* decodeLaunchUrl(request);
   const launcher = yield* resolveLauncher();
   yield* launchUrl(launcher, url);
