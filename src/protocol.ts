@@ -5,8 +5,7 @@ export const BROWSER_URLS_HOST_NAME = "dev.omarchy.browser_urls";
 export const EXTENSION_ID = "gmbhiemgnkapbblhoipdeiemfacjjoch";
 
 export type NativeResponse =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly error: string };
+  { readonly ok: true } | { readonly ok: false; readonly error: string };
 
 export interface BrowserTabState {
   readonly windowId?: number;

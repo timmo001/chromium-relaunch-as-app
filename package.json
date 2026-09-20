@@ -28,7 +28,7 @@
     "@types/bun": "1.4.0",
     "@types/chrome": "0.2.2",
     "oxlint": "1.83.0",
-    "prettier": "3.5.3",
+    "prettier": "3.9.8",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
