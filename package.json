@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.0-rc.117",
-    "effect": "4.0.0-rc.112"
+    "effect": "4.0.0-rc.117"
   },
   "devDependencies": {
     "@effect/tsgo": "0.45.0",
