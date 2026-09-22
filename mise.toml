@@ -1,6 +1,6 @@
 [tools]
 bun = "1.4.2"
-node = "26.9.0"
+node = "26.10.0"
 
 [tasks.install]
 run = "bun install --frozen-lockfile"
