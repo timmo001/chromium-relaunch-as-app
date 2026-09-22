@@ -3,6 +3,9 @@ import effectRulesConfig from "@timmo001/oxlint-rules/configs/recommended-effect
 
 export default defineConfig({
   extends: [effectRulesConfig],
+  options: {
+    typeAware: true,
+  },
   overrides: [
     {
       files: ["src/background.ts", "src/popup.ts"],
