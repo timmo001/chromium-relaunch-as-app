@@ -12,4 +12,4 @@ on:
 jobs:
   lint:
     # yamllint disable-line rule:line-length
-    uses: timmo001/workflows/.github/workflows/lint-general.yml@3f210701e71d6548df383f53faec30836b482fa4  # master
+    uses: timmo001/workflows/.github/workflows/lint-general.yml@010ccf64e49d2984bb5f0982d6ae7314114472a6  # master
