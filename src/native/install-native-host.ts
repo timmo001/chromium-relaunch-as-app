@@ -1,16 +1,8 @@
-import {
-  chmodSync,
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import * as BunRuntime from "@effect/platform-bun/BunRuntime";
-import { Effect, Schema } from "effect";
+import * as BunServices from "@effect/platform-bun/BunServices";
+import { Effect, FileSystem, Schema } from "effect";
 import {
   BROWSER_URLS_HOST_NAME,
   EXTENSION_ID,
@@ -77,18 +69,19 @@ function selectedBrowsers(browser: Browser | "all"): ReadonlyArray<Browser> {
   return browser === "all" ? browsers : [browser];
 }
 
-function atomicCopy(source: string, destination: string): void {
+const atomicCopy = Effect.fn("NativeHostInstaller.atomicCopy")(function* (
+  source: string,
+  destination: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
   const temporary = `${destination}.${process.pid}.tmp`;
 
-  try {
-    copyFileSync(source, temporary);
-    chmodSync(temporary, 0o755);
-    renameSync(temporary, destination);
-  } catch (error) {
-    rmSync(temporary, { force: true });
-    throw error;
-  }
-}
+  yield* fs.copyFile(source, temporary).pipe(
+    Effect.andThen(fs.chmod(temporary, 0o755)),
+    Effect.andThen(fs.rename(temporary, destination)),
+    Effect.onError(() => Effect.ignore(fs.remove(temporary, { force: true }))),
+  );
+});
 
 interface NativeHostManifest {
   readonly name: string;
@@ -98,109 +91,127 @@ interface NativeHostManifest {
   readonly allowed_origins: ReadonlyArray<string>;
 }
 
-function atomicWriteJson(destination: string, value: NativeHostManifest): void {
-  const temporary = `${destination}.${process.pid}.tmp`;
+const atomicWriteJson = Effect.fn("NativeHostInstaller.atomicWriteJson")(
+  function* (destination: string, value: NativeHostManifest) {
+    const fs = yield* FileSystem.FileSystem;
+    const temporary = `${destination}.${process.pid}.tmp`;
 
-  try {
-    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
-      mode: 0o644,
-      flag: "wx",
-    });
-    renameSync(temporary, destination);
-  } catch (error) {
-    rmSync(temporary, { force: true });
-    throw error;
-  }
-}
+    yield* fs
+      .writeFileString(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+        mode: 0o644,
+        flag: "wx",
+      })
+      .pipe(
+        Effect.andThen(fs.rename(temporary, destination)),
+        Effect.onError(() =>
+          Effect.ignore(fs.remove(temporary, { force: true })),
+        ),
+      );
+  },
+);
 
 export const installNativeHosts = Effect.fn("NativeHostInstaller.install")(
   function* (browser: Browser | "all", paths = defaultInstallPaths()) {
-    yield* Effect.try({
-      try: () => {
-        const installDirectory = join(
-          paths.dataHome,
-          "chromium-relaunch-as-app/native-hosts",
+    const fs = yield* FileSystem.FileSystem;
+
+    yield* Effect.gen(function* () {
+      const installDirectory = join(
+        paths.dataHome,
+        "chromium-relaunch-as-app/native-hosts",
+      );
+
+      yield* fs.makeDirectory(installDirectory, { recursive: true });
+
+      for (const host of hostFiles) {
+        const source = join(paths.artifactDirectory, host.executable);
+
+        if (!(yield* fs.exists(source))) {
+          return yield* new InstallerError({
+            message: `Built native host not found: ${source}`,
+          });
+        }
+
+        yield* atomicCopy(source, join(installDirectory, host.executable));
+      }
+
+      for (const selected of selectedBrowsers(browser)) {
+        const manifestDirectory = join(
+          paths.configHome,
+          browserDirectories[selected],
         );
 
-        mkdirSync(installDirectory, { recursive: true });
+        yield* fs.makeDirectory(manifestDirectory, { recursive: true });
 
         for (const host of hostFiles) {
-          const source = join(paths.artifactDirectory, host.executable);
-
-          if (!existsSync(source)) {
-            throw new Error(`Built native host not found: ${source}`);
-          }
-
-          atomicCopy(source, join(installDirectory, host.executable));
+          yield* atomicWriteJson(join(manifestDirectory, `${host.name}.json`), {
+            name: host.name,
+            description: host.description,
+            path: join(installDirectory, host.executable),
+            type: "stdio",
+            allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+          });
         }
-
-        for (const selected of selectedBrowsers(browser)) {
-          const manifestDirectory = join(
-            paths.configHome,
-            browserDirectories[selected],
-          );
-
-          mkdirSync(manifestDirectory, { recursive: true });
-
-          for (const host of hostFiles) {
-            atomicWriteJson(join(manifestDirectory, `${host.name}.json`), {
-              name: host.name,
-              description: host.description,
-              path: join(installDirectory, host.executable),
-              type: "stdio",
-              allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
-            });
-          }
-        }
-      },
-      catch: (cause) =>
-        new InstallerError({
-          message: "Failed to install native hosts",
-          cause,
-        }),
-    });
+      }
+    }).pipe(
+      Effect.mapError((cause) =>
+        cause instanceof InstallerError
+          ? cause
+          : new InstallerError({
+              message: "Failed to install native hosts",
+              cause,
+            }),
+      ),
+    );
   },
 );
 
 export const uninstallNativeHosts = Effect.fn("NativeHostInstaller.uninstall")(
   function* (browser: Browser | "all", paths = defaultInstallPaths()) {
-    yield* Effect.try({
-      try: () => {
-        for (const selected of selectedBrowsers(browser)) {
-          const manifestDirectory = join(
-            paths.configHome,
-            browserDirectories[selected],
-          );
+    const fs = yield* FileSystem.FileSystem;
 
-          for (const host of hostFiles) {
-            rmSync(join(manifestDirectory, `${host.name}.json`), {
-              force: true,
-            });
-          }
-        }
-
-        const manifestsRemain = Object.values(browserDirectories).some(
-          (directory) =>
-            hostFiles.some((host) =>
-              existsSync(
-                join(paths.configHome, directory, `${host.name}.json`),
-              ),
-            ),
+    yield* Effect.gen(function* () {
+      for (const selected of selectedBrowsers(browser)) {
+        const manifestDirectory = join(
+          paths.configHome,
+          browserDirectories[selected],
         );
 
-        if (!manifestsRemain) {
-          rmSync(join(paths.dataHome, "chromium-relaunch-as-app"), {
-            recursive: true,
+        for (const host of hostFiles) {
+          yield* fs.remove(join(manifestDirectory, `${host.name}.json`), {
             force: true,
           });
         }
-      },
-      catch: (cause) =>
-        new InstallerError({
-          message: "Failed to uninstall native hosts",
-          cause,
-        }),
-    });
+      }
+
+      let manifestsRemain = false;
+
+      for (const directory of Object.values(browserDirectories)) {
+        for (const host of hostFiles) {
+          if (
+            yield* fs.exists(
+              join(paths.configHome, directory, `${host.name}.json`),
+            )
+          ) {
+            manifestsRemain = true;
+          }
+        }
+      }
+
+      if (!manifestsRemain) {
+        yield* fs.remove(join(paths.dataHome, "chromium-relaunch-as-app"), {
+          recursive: true,
+          force: true,
+        });
+      }
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new InstallerError({
+            message: "Failed to uninstall native hosts",
+            cause,
+          }),
+      ),
+    );
   },
 );
 
@@ -268,5 +279,7 @@ if (import.meta.main) {
     ),
   );
 
-  BunRuntime.runMain(program, { disableErrorReporting: true });
+  BunRuntime.runMain(program.pipe(Effect.provide(BunServices.layer)), {
+    disableErrorReporting: true,
+  });
 }

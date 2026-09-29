@@ -1,7 +1,7 @@
 import {
   BROWSER_URLS_HOST_NAME,
   BrowserTabState,
-  NativeResponse,
+  isNativeResponse,
   RELAUNCH_HOST_NAME,
 } from "./protocol.js";
 
@@ -20,16 +20,6 @@ const URLS_RECONNECT_DELAY_MS = 5000;
 type ContextAction = "launchAsApp" | "reopenInBrowser";
 
 type RelaunchSource = "context menu" | "keyboard shortcut";
-
-function isNativeResponse(value: unknown): value is NativeResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "ok" in value &&
-    typeof value.ok === "boolean" &&
-    (!("error" in value) || typeof value.error === "string")
-  );
-}
 
 function ensureContextMenu(): void {
   chrome.contextMenus.removeAll(() => {

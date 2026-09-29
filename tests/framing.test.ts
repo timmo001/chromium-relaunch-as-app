@@ -1,18 +1,9 @@
-import {
-  closeSync,
-  mkdtempSync,
-  openSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Stream } from "effect";
 import {
   MAX_INBOUND_MESSAGE_BYTES,
   encodeNativeMessage,
-  readNativeMessage,
+  decodeNativeMessages,
 } from "../src/native/framing.js";
 
 const littleEndian = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
@@ -28,24 +19,8 @@ function framed(
   return frame;
 }
 
-function withInput<A, E>(
-  bytes: Uint8Array,
-  use: (fileDescriptor: number) => Effect.Effect<A, E>,
-): Effect.Effect<A, E> {
-  const directory = mkdtempSync(join(tmpdir(), "native-framing-"));
-  const path = join(directory, "input");
-  writeFileSync(path, bytes);
-  const fileDescriptor = openSync(path, "r");
-
-  return use(fileDescriptor).pipe(
-    Effect.ensuring(
-      Effect.sync(() => {
-        closeSync(fileDescriptor);
-        rmSync(directory, { recursive: true });
-      }),
-    ),
-  );
-}
+const readFirst = (bytes: Uint8Array) =>
+  decodeNativeMessages(Stream.make(bytes)).pipe(Stream.runCollect);
 
 describe("native messaging framing", () => {
   it.effect("reads consecutive UTF-8 JSON messages", () => {
@@ -56,31 +31,25 @@ describe("native messaging framing", () => {
     bytes.set(first);
     bytes.set(second, first.byteLength);
 
-    return withInput(bytes, (fileDescriptor) =>
-      Effect.gen(function* () {
-        expect(yield* readNativeMessage(fileDescriptor)).toEqual({
-          value: "£",
-        });
-        expect(yield* readNativeMessage(fileDescriptor)).toEqual([1, 2, 3]);
-        expect(yield* readNativeMessage(fileDescriptor)).toBeNull();
-      }),
-    );
+    return Effect.gen(function* () {
+      const messages = yield* readFirst(bytes);
+
+      expect(Array.from(messages)).toEqual([{ value: "£" }, [1, 2, 3]]);
+    });
   });
 
   it.effect("rejects truncated headers and payloads", () =>
     Effect.gen(function* () {
-      const headerError = yield* withInput(
-        new Uint8Array([1, 0, 0]),
-        (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
+      const headerError = yield* readFirst(new Uint8Array([1, 0, 0])).pipe(
+        Effect.flip,
       );
 
       expect(headerError._tag).toBe("NativeMessageError");
       expect(headerError.message).toBe("Native message is truncated");
 
-      const payloadError = yield* withInput(
+      const payloadError = yield* readFirst(
         framed(new TextEncoder().encode("{}"), 8),
-        (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
-      );
+      ).pipe(Effect.flip);
 
       expect(payloadError.message).toBe("Native message is truncated");
     }),
@@ -88,23 +57,21 @@ describe("native messaging framing", () => {
 
   it.effect("rejects zero-length, oversized, and malformed messages", () =>
     Effect.gen(function* () {
-      const zero = yield* withInput(framed(new Uint8Array(), 0), (descriptor) =>
-        readNativeMessage(descriptor).pipe(Effect.flip),
+      const zero = yield* readFirst(framed(new Uint8Array(), 0)).pipe(
+        Effect.flip,
       );
 
       expect(zero.message).toContain("cannot be empty");
 
-      const oversized = yield* withInput(
+      const oversized = yield* readFirst(
         framed(new Uint8Array(), MAX_INBOUND_MESSAGE_BYTES + 1),
-        (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
-      );
+      ).pipe(Effect.flip);
 
       expect(oversized.message).toContain("exceeds");
 
-      const malformed = yield* withInput(
+      const malformed = yield* readFirst(
         framed(new TextEncoder().encode("{")),
-        (descriptor) => readNativeMessage(descriptor).pipe(Effect.flip),
-      );
+      ).pipe(Effect.flip);
 
       expect(malformed.message).toBe("Native message is not valid JSON");
     }),

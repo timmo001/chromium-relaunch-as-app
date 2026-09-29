@@ -13,3 +13,17 @@ export interface BrowserTabState {
   readonly url: string;
   readonly active: boolean;
 }
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- Validates untyped runtime messages from the native host.
+export function isNativeResponse(value: unknown): value is NativeResponse {
+  return (
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Narrowing an untyped message; Effect would bloat the extension bundles.
+    typeof value === "object" &&
+    value !== null &&
+    "ok" in value &&
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Narrowing an untyped message; Effect would bloat the extension bundles.
+    typeof value.ok === "boolean" &&
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Narrowing an untyped message; Effect would bloat the extension bundles.
+    (!("error" in value) || typeof value.error === "string")
+  );
+}

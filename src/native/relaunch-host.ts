@@ -1,8 +1,9 @@
-import { accessSync, constants, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import * as BunRuntime from "@effect/platform-bun/BunRuntime";
-import { Effect, Schema } from "effect";
+import { BunServices } from "@effect/platform-bun";
+import { Effect, FileSystem, Schema } from "effect";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import {
   logHostError,
   readNativeMessage,
@@ -18,15 +19,17 @@ export class LaunchError extends Schema.TaggedError<LaunchError>()(
   },
 ) {}
 
-function executable(path: string | null | undefined): path is string {
+const executable = Effect.fn("RelaunchHost.executable")(function* (
+  path: string | null | undefined,
+) {
   if (!path) return false;
+  const fs = yield* FileSystem.FileSystem;
 
-  try {
-    return statSync(path).isFile() && (accessSync(path, constants.X_OK), true);
-  } catch {
-    return false;
-  }
-}
+  return yield* fs.stat(path).pipe(
+    Effect.map((info) => info.type === "File" && (info.mode & 0o111) !== 0),
+    Effect.orElseSucceed(() => false),
+  );
+});
 
 export const resolveLauncher = Effect.fn("RelaunchHost.resolveLauncher")(
   function* () {
@@ -39,7 +42,7 @@ export const resolveLauncher = Effect.fn("RelaunchHost.resolveLauncher")(
     );
 
     for (const candidate of [override, pathCommand, fallback]) {
-      if (executable(candidate)) return candidate;
+      if (candidate && (yield* executable(candidate))) return candidate;
     }
 
     return yield* new LaunchError({
@@ -52,24 +55,29 @@ export const launchUrl = Effect.fn("RelaunchHost.launchUrl")(function* (
   launcher: string,
   url: string,
 ) {
-  yield* Effect.try({
-    try: () => {
-      const subprocess = Bun.spawn([launcher, url], {
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+
+  yield* spawner
+    .spawn(
+      ChildProcess.make(launcher, [url], {
         stdin: "ignore",
         stdout: "ignore",
         stderr: "ignore",
         detached: true,
-      });
-
-      subprocess.unref();
-    },
-    catch: (cause) =>
-      new LaunchError({ message: "Failed to launch app window", cause }),
-  });
+      }),
+    )
+    .pipe(
+      Effect.flatMap((child) => Effect.asVoid(child.unref)),
+      Effect.scoped,
+      Effect.mapError(
+        (cause) =>
+          new LaunchError({ message: "Failed to launch app window", cause }),
+      ),
+    );
 });
 
 export const runRelaunchHost = Effect.fn("RelaunchHost.run")(function* () {
-  const request = yield* readNativeMessage();
+  const request = yield* readNativeMessage;
 
   if (request === null) {
     return yield* new LaunchError({ message: "No native message received" });
@@ -96,6 +104,7 @@ if (import.meta.main) {
           ),
         ),
       ),
+      Effect.provide(BunServices.layer),
     ),
     { disableErrorReporting: true },
   );

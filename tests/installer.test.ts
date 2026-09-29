@@ -1,15 +1,7 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as BunServices from "@effect/platform-bun/BunServices";
 import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import {
   installNativeHosts,
   uninstallNativeHosts,
@@ -21,86 +13,87 @@ import {
 } from "../src/protocol.js";
 
 describe("native host installer", () => {
-  it.effect("installs and uninstalls every maintained browser manifest", () => {
-    const root = mkdtempSync(join(tmpdir(), "native-installer-"));
+  it.effect("installs and uninstalls every maintained browser manifest", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped();
 
-    const paths = {
-      configHome: join(root, "config"),
-      dataHome: join(root, "data"),
-      artifactDirectory: join(root, "artifacts"),
-    };
+        const paths = {
+          configHome: join(root, "config"),
+          dataHome: join(root, "data"),
+          artifactDirectory: join(root, "artifacts"),
+        };
 
-    writeFileSync(join(root, "unrelated"), "keep");
-    mkdirSync(paths.artifactDirectory, { recursive: true });
-    writeFileSync(
-      join(paths.artifactDirectory, "relaunch-current-page-host"),
-      "relaunch",
-    );
-    writeFileSync(join(paths.artifactDirectory, "browser-urls-host"), "urls");
-
-    return Effect.gen(function* () {
-      yield* installNativeHosts("all", paths);
-
-      const browserDirectories = [
-        "chromium",
-        "google-chrome",
-        "BraveSoftware/Brave-Browser",
-        "microsoft-edge",
-        "vivaldi",
-      ];
-
-      for (const browser of browserDirectories) {
-        const directory = join(
-          paths.configHome,
-          browser,
-          "NativeMessagingHosts",
+        yield* fs.writeFileString(join(root, "unrelated"), "keep");
+        yield* fs.makeDirectory(paths.artifactDirectory, { recursive: true });
+        yield* fs.writeFileString(
+          join(paths.artifactDirectory, "relaunch-current-page-host"),
+          "relaunch",
+        );
+        yield* fs.writeFileString(
+          join(paths.artifactDirectory, "browser-urls-host"),
+          "urls",
         );
 
-        for (const name of [RELAUNCH_HOST_NAME, BROWSER_URLS_HOST_NAME]) {
-          const manifest: unknown = JSON.parse(
-            readFileSync(join(directory, `${name}.json`), "utf8"),
+        yield* installNativeHosts("all", paths);
+
+        const browserDirectories = [
+          "chromium",
+          "google-chrome",
+          "BraveSoftware/Brave-Browser",
+          "microsoft-edge",
+          "vivaldi",
+        ];
+
+        for (const browser of browserDirectories) {
+          const directory = join(
+            paths.configHome,
+            browser,
+            "NativeMessagingHosts",
           );
 
-          expect(manifest).toMatchObject({
-            name,
-            type: "stdio",
-            allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
-          });
+          for (const name of [RELAUNCH_HOST_NAME, BROWSER_URLS_HOST_NAME]) {
+            const manifest: unknown = JSON.parse(
+              yield* fs.readFileString(join(directory, `${name}.json`)),
+            );
+
+            expect(manifest).toMatchObject({
+              name,
+              type: "stdio",
+              allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+            });
+          }
         }
-      }
 
-      yield* installNativeHosts("all", paths);
-      yield* uninstallNativeHosts("all", paths);
-      expect(existsSync(join(paths.dataHome, "chromium-relaunch-as-app"))).toBe(
-        false,
-      );
-      expect(readFileSync(join(root, "unrelated"), "utf8")).toBe("keep");
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => rmSync(root, { recursive: true, force: true })),
-      ),
-    );
-  });
+        yield* installNativeHosts("all", paths);
+        yield* uninstallNativeHosts("all", paths);
+        expect(
+          yield* fs.exists(join(paths.dataHome, "chromium-relaunch-as-app")),
+        ).toBe(false);
+        expect(yield* fs.readFileString(join(root, "unrelated"))).toBe("keep");
+      }),
+    ).pipe(Effect.provide(BunServices.layer)),
+  );
 
-  it.effect("fails when built host artifacts are missing", () => {
-    const root = mkdtempSync(join(tmpdir(), "native-installer-missing-"));
+  it.effect("fails when built host artifacts are missing", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const root = yield* fs.makeTempDirectoryScoped();
 
-    const paths = {
-      configHome: join(root, "config"),
-      dataHome: join(root, "data"),
-      artifactDirectory: join(root, "missing"),
-    };
+        const paths = {
+          configHome: join(root, "config"),
+          dataHome: join(root, "data"),
+          artifactDirectory: join(root, "missing"),
+        };
 
-    return Effect.gen(function* () {
-      const error = yield* installNativeHosts("chromium", paths).pipe(
-        Effect.flip,
-      );
+        const error = yield* installNativeHosts("chromium", paths).pipe(
+          Effect.flip,
+        );
 
-      expect(error._tag).toBe("InstallerError");
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => rmSync(root, { recursive: true, force: true })),
-      ),
-    );
-  });
+        expect(error._tag).toBe("InstallerError");
+      }),
+    ).pipe(Effect.provide(BunServices.layer)),
+  );
 });

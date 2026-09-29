@@ -1,8 +1,7 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as BunServices from "@effect/platform-bun/BunServices";
 import { describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, FileSystem } from "effect";
 import { writeBrowserState } from "../src/native/browser-urls-host.js";
 import { launchUrl } from "../src/native/relaunch-host.js";
 import { decodeLaunchUrl } from "../src/native/schemas.js";
@@ -37,60 +36,59 @@ describe("relaunch host", () => {
       ).pipe(Effect.flip);
 
       expect(error._tag).toBe("LaunchError");
-    }),
+    }).pipe(Effect.provide(BunServices.layer)),
   );
 });
 
 describe("browser URL state", () => {
-  it.effect("atomically replaces the state file", () => {
-    const directory = mkdtempSync(join(tmpdir(), "browser-state-"));
-    const stateFile = join(directory, "state", "browser-urls.json");
+  it.effect("atomically replaces the state file", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const directory = yield* fs.makeTempDirectoryScoped();
+        const stateFile = join(directory, "state", "browser-urls.json");
 
-    return Effect.gen(function* () {
-      yield* writeBrowserState(
-        [
+        yield* writeBrowserState(
+          [
+            {
+              windowId: 1,
+              title: "Example",
+              url: "https://example.com/",
+              active: true,
+            },
+          ],
+          stateFile,
+        );
+        const stored: unknown = JSON.parse(yield* fs.readFileString(stateFile));
+        expect(stored).toEqual([
           {
             windowId: 1,
             title: "Example",
             url: "https://example.com/",
             active: true,
           },
-        ],
-        stateFile,
-      );
-      const stored: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
-      expect(stored).toEqual([
-        {
-          windowId: 1,
-          title: "Example",
-          url: "https://example.com/",
-          active: true,
-        },
-      ]);
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
-      ),
-    );
-  });
+        ]);
+      }),
+    ).pipe(Effect.provide(BunServices.layer)),
+  );
 
-  it.effect("preserves the previous state after a filesystem failure", () => {
-    const directory = mkdtempSync(join(tmpdir(), "browser-state-failure-"));
-    const blockedParent = join(directory, "not-a-directory");
-    writeFileSync(blockedParent, "existing");
+  it.effect("preserves the previous state after a filesystem failure", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const directory = yield* fs.makeTempDirectoryScoped();
+        const blockedParent = join(directory, "not-a-directory");
 
-    return Effect.gen(function* () {
-      const error = yield* writeBrowserState(
-        [],
-        join(blockedParent, "state.json"),
-      ).pipe(Effect.flip);
+        yield* fs.writeFileString(blockedParent, "existing");
 
-      expect(error._tag).toBe("StateWriteError");
-      expect(readFileSync(blockedParent, "utf8")).toBe("existing");
-    }).pipe(
-      Effect.ensuring(
-        Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
-      ),
-    );
-  });
+        const error = yield* writeBrowserState(
+          [],
+          join(blockedParent, "state.json"),
+        ).pipe(Effect.flip);
+
+        expect(error._tag).toBe("StateWriteError");
+        expect(yield* fs.readFileString(blockedParent)).toBe("existing");
+      }),
+    ).pipe(Effect.provide(BunServices.layer)),
+  );
 });

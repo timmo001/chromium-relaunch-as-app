@@ -1,5 +1,4 @@
-import { readSync, writeSync } from "node:fs";
-import { Effect, Schema } from "effect";
+import { Effect, Option, Schema, Stdio, Stream } from "effect";
 
 export const MAX_INBOUND_MESSAGE_BYTES = 64 * 1024 * 1024;
 
@@ -19,86 +18,110 @@ export class NativeMessageError extends Schema.TaggedError<NativeMessageError>()
   },
 ) {}
 
-function readExact(
-  fileDescriptor: number,
-  size: number,
-  allowCleanEof: boolean,
-): Effect.Effect<Uint8Array | null, NativeMessageError> {
-  return Effect.try({
-    try: () => {
-      const bytes = new Uint8Array(size);
-      let offset = 0;
+const parseFrames = (
+  buffer: Uint8Array,
+): Effect.Effect<
+  readonly [rest: Uint8Array, messages: ReadonlyArray<unknown>],
+  NativeMessageError
+> =>
+  Effect.gen(function* () {
+    const messages: Array<unknown> = [];
+    let rest = buffer;
 
-      while (offset < size) {
-        const count = readSync(
-          fileDescriptor,
-          bytes,
-          offset,
-          size - offset,
-          null,
-        );
+    while (rest.byteLength >= 4) {
+      const length = new DataView(
+        rest.buffer,
+        rest.byteOffset,
+        rest.byteLength,
+      ).getUint32(0, nativeLittleEndian);
 
-        if (count === 0) {
-          if (allowCleanEof && offset === 0) return null;
-          throw new Error(`Expected ${size} bytes, received ${offset}`);
-        }
-
-        offset += count;
+      if (length === 0) {
+        return yield* new NativeMessageError({
+          message: "Native message payload cannot be empty",
+        });
       }
 
-      return bytes;
-    },
-    catch: (cause) =>
-      new NativeMessageError({ message: "Native message is truncated", cause }),
+      if (length > MAX_INBOUND_MESSAGE_BYTES) {
+        return yield* new NativeMessageError({
+          message: `Native message exceeds ${MAX_INBOUND_MESSAGE_BYTES} bytes`,
+        });
+      }
+
+      if (rest.byteLength < 4 + length) break;
+
+      const payload = rest.subarray(4, 4 + length);
+      rest = rest.subarray(4 + length);
+
+      messages.push(
+        yield* Effect.try({
+          try: () => {
+            const parsed: unknown = JSON.parse(textDecoder.decode(payload));
+
+            return parsed;
+          },
+          catch: (cause) =>
+            new NativeMessageError({
+              message: "Native message is not valid JSON",
+              cause,
+            }),
+        }),
+      );
+    }
+
+    return [rest, messages] as const;
   });
-}
 
-export const readNativeMessage = Effect.fn("NativeMessaging.read")(function* (
-  fileDescriptor = 0,
-) {
-  const header = yield* readExact(fileDescriptor, 4, true);
+export const decodeNativeMessages = <E>(
+  bytes: Stream.Stream<Uint8Array, E>,
+): Stream.Stream<unknown, NativeMessageError> =>
+  bytes.pipe(
+    Stream.mapError(
+      (cause) =>
+        new NativeMessageError({
+          message: "Failed to read native message",
+          cause,
+        }),
+    ),
+    Stream.map(Option.some),
+    Stream.concat(Stream.make(Option.none<Uint8Array>())),
+    Stream.mapAccumEffect(
+      (): Uint8Array => new Uint8Array(),
+      (buffered, chunk) => {
+        if (Option.isNone(chunk)) {
+          return buffered.byteLength === 0
+            ? Effect.succeed([buffered, []] as const)
+            : Effect.fail(
+                new NativeMessageError({
+                  message: "Native message is truncated",
+                }),
+              );
+        }
 
-  if (header === null) return null;
+        const combined = new Uint8Array(
+          buffered.byteLength + chunk.value.byteLength,
+        );
 
-  const length = new DataView(
-    header.buffer,
-    header.byteOffset,
-    header.byteLength,
-  ).getUint32(0, nativeLittleEndian);
+        combined.set(buffered);
+        combined.set(chunk.value, buffered.byteLength);
 
-  if (length === 0) {
-    return yield* new NativeMessageError({
-      message: "Native message payload cannot be empty",
-    });
-  }
+        return parseFrames(combined);
+      },
+    ),
+  );
 
-  if (length > MAX_INBOUND_MESSAGE_BYTES) {
-    return yield* new NativeMessageError({
-      message: `Native message exceeds ${MAX_INBOUND_MESSAGE_BYTES} bytes`,
-    });
-  }
+export const nativeMessages: Stream.Stream<
+  unknown,
+  NativeMessageError,
+  Stdio.Stdio
+> = Stream.unwrap(
+  Effect.map(Stdio.Stdio, (stdio) => decodeNativeMessages(stdio.stdin)),
+);
 
-  const payload = yield* readExact(fileDescriptor, length, false);
-
-  if (payload === null) {
-    return yield* new NativeMessageError({
-      message: "Native message payload is missing",
-    });
-  }
-
-  return yield* Effect.try({
-    try: () => {
-      const parsed: unknown = JSON.parse(textDecoder.decode(payload));
-
-      return parsed;
-    },
-    catch: (cause) =>
-      new NativeMessageError({
-        message: "Native message is not valid JSON",
-        cause,
-      }),
-  });
-});
+export const readNativeMessage = nativeMessages.pipe(
+  Stream.take(1),
+  Stream.runHead,
+  Effect.map(Option.getOrNull),
+);
 
 export const encodeNativeMessage = Effect.fn("NativeMessaging.encode")(
   function* (
@@ -135,32 +158,20 @@ export const encodeNativeMessage = Effect.fn("NativeMessaging.encode")(
 export const writeNativeMessage = Effect.fn("NativeMessaging.write")(function* (
   // oxlint-disable-next-line anti-slop/no-unknown-parameters -- JSON serialization is the output boundary.
   message: unknown,
-  fileDescriptor = 1,
 ) {
   const frame = yield* encodeNativeMessage(message);
-  yield* Effect.try({
-    try: () => {
-      let offset = 0;
+  const stdio = yield* Stdio.Stdio;
 
-      while (offset < frame.byteLength) {
-        const count = writeSync(
-          fileDescriptor,
-          frame,
-          offset,
-          frame.byteLength - offset,
-        );
-
-        if (count === 0)
-          throw new Error("Native response write made no progress");
-        offset += count;
-      }
-    },
-    catch: (cause) =>
-      new NativeMessageError({
-        message: "Failed to write native response",
-        cause,
-      }),
-  });
+  yield* Stream.make(frame).pipe(
+    Stream.run(stdio.stdout({ endOnDone: false })),
+    Effect.mapError(
+      (cause) =>
+        new NativeMessageError({
+          message: "Failed to write native response",
+          cause,
+        }),
+    ),
+  );
 });
 
 export function logHostError(error: Error): void {

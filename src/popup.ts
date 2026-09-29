@@ -1,4 +1,4 @@
-import { NativeResponse, RELAUNCH_HOST_NAME } from "./protocol.js";
+import { isNativeResponse, RELAUNCH_HOST_NAME } from "./protocol.js";
 
 const HOST_NAME = RELAUNCH_HOST_NAME;
 
@@ -17,16 +17,6 @@ function element<T extends HTMLElement>(
   }
 
   return value;
-}
-
-function isNativeResponse(value: unknown): value is NativeResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "ok" in value &&
-    typeof value.ok === "boolean" &&
-    (!("error" in value) || typeof value.error === "string")
-  );
 }
 
 function setStatus(message: string, isError = false): void {

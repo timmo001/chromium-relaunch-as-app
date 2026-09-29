@@ -1,17 +1,10 @@
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import * as BunRuntime from "@effect/platform-bun/BunRuntime";
-import { Effect, Schema } from "effect";
-import { logHostError, readNativeMessage } from "./framing.js";
+import { BunServices } from "@effect/platform-bun";
+import { Effect, FileSystem, Schema, Stream } from "effect";
+import { logHostError, nativeMessages } from "./framing.js";
 import { BrowserTabStateSnapshot } from "./schemas.js";
 
 export class StateWriteError extends Schema.TaggedError<StateWriteError>()(
@@ -38,63 +31,60 @@ export const writeBrowserState = Effect.fn("BrowserUrlsHost.writeState")(
       `.browser-urls.${process.pid}.${randomUUID()}.tmp`,
     );
 
-    yield* Effect.try({
-      try: () => {
-        mkdirSync(directory, { recursive: true });
-        const descriptor = openSync(temporary, "wx", 0o600);
+    const fs = yield* FileSystem.FileSystem;
 
-        try {
-          writeFileSync(descriptor, `${JSON.stringify(snapshot, null, 2)}\n`);
-        } finally {
-          closeSync(descriptor);
-        }
-
-        renameSync(temporary, stateFile);
-      },
-      catch: (cause) => {
-        try {
-          rmSync(temporary, { force: true });
-        } catch {
-          // Preserve the original persistence failure.
-        }
-
-        return new StateWriteError({
-          message: "Failed to persist browser URL state",
-          cause,
-        });
-      },
-    });
+    yield* fs.makeDirectory(directory, { recursive: true }).pipe(
+      Effect.andThen(
+        fs.writeFileString(
+          temporary,
+          `${JSON.stringify(snapshot, null, 2)}\n`,
+          {
+            flag: "wx",
+            mode: 0o600,
+          },
+        ),
+      ),
+      Effect.andThen(fs.rename(temporary, stateFile)),
+      Effect.onError(() =>
+        // Preserve the original persistence failure.
+        Effect.ignore(fs.remove(temporary, { force: true })),
+      ),
+      Effect.mapError(
+        (cause) =>
+          new StateWriteError({
+            message: "Failed to persist browser URL state",
+            cause,
+          }),
+      ),
+    );
   },
 );
 
 export const runBrowserUrlsHost = Effect.fn("BrowserUrlsHost.run")(function* (
   stateFile = defaultStateFile(),
 ) {
-  while (true) {
-    const message = yield* readNativeMessage();
-
-    if (message === null) return;
-
-    const snapshot = yield* Schema.decodeUnknownEffect(BrowserTabStateSnapshot)(
-      message,
-    ).pipe(
-      Effect.mapError(
-        (cause) =>
-          new StateWriteError({
-            message: "Browser URL state is invalid",
-            cause,
-          }),
+  yield* nativeMessages.pipe(
+    Stream.mapEffect((message) =>
+      Schema.decodeUnknownEffect(BrowserTabStateSnapshot)(message).pipe(
+        Effect.mapError(
+          (cause) =>
+            new StateWriteError({
+              message: "Browser URL state is invalid",
+              cause,
+            }),
+        ),
+        Effect.flatMap((snapshot) => writeBrowserState(snapshot, stateFile)),
       ),
-    );
-
-    yield* writeBrowserState(snapshot, stateFile);
-  }
+    ),
+    Stream.runDrain,
+  );
 });
 
 if (import.meta.main) {
   BunRuntime.runMain(
     runBrowserUrlsHost().pipe(
       Effect.tapError((error) => Effect.sync(() => logHostError(error))),
+      Effect.provide(BunServices.layer),
     ),
     { disableErrorReporting: true },
   );
