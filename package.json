@@ -14,14 +14,14 @@
     "lint": "oxlint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepare": "effect-tsgo patch"
+    "prepare": "effect-tsgo patch --force=false"
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.0-rc.118",
     "effect": "4.0.0-rc.118"
   },
   "devDependencies": {
-    "@effect/tsgo": "0.46.1",
+    "@effect/tsgo": "0.47.0",
     "@effect/vitest": "4.0.0-rc.118",
     "@oxlint/plugins": "1.86.0",
     "@timmo001/oxlint-rules": "0.4.0",
