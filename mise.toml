@@ -30,5 +30,4 @@ depends = ["install"]
 run = "bun run format:check"
 
 [tasks.check]
-depends = ["install"]
-run = "bun run check"
+depends = ["lint", "typecheck", "test", "format:check", "build"]
