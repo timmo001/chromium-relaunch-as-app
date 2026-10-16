@@ -1,0 +1,31 @@
+---
+name: Tooling drift
+
+# Opens a draft review pull request when an Omarchy release is newer than the
+# one recorded in tooling.yml, through the tooling-drift tool pinned in
+# mise.toml. See the tooling-drift skill.
+
+# yamllint disable-line rule:truthy
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tooling-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    if: github.repository == 'timmo001/chromium-relaunch-as-app'
+    # yamllint disable-line rule:line-length
+    uses: timmo001/workflows/.github/workflows/tooling-drift.yml@996dd60d03b12f28b482074a9eed7083a18e2439 # 20261013.1
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    secrets:
+      token: ${{ secrets.TOOLING_DRIFT_TOKEN }}

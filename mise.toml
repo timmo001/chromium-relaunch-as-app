@@ -1,6 +1,8 @@
 [tools]
 bun = "1.4.3"
 node = "26.12.0"
+# Approved for aube's package-age check while the package is under 30 days old.
+"npm:@timmo001/tooling-drift" = { version = "0.1.4", allow_low_downloads = true }
 
 [tasks.install]
 run = "bun install --frozen-lockfile"
@@ -31,3 +33,19 @@ run = "bun run format:check"
 
 [tasks.check]
 depends = ["lint", "typecheck", "test", "format:check", "build"]
+
+[tasks."tooling:status"]
+description = "Compare the reviewed Omarchy release in tooling.yml with the latest"
+run = "tooling-drift status"
+
+[tasks."tooling:update"]
+description = "Record a tool release as reviewed in tooling.yml after reviewing it"
+usage = '''
+arg "<repo>" help="Tool repository, e.g. basecamp/omarchy"
+arg "<tag>" help="Release tag, e.g. v4.0.4"
+'''
+run = "tooling-drift update $usage_repo $usage_tag"
+
+[tasks."tooling:publish"]
+description = "Open or refresh a draft review pull request when a newer Omarchy release is out"
+run = "tooling-drift publish"

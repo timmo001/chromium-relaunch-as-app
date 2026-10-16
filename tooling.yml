@@ -1,0 +1,16 @@
+---
+# Tool releases chromium-relaunch-as-app was last reviewed against. The
+# tooling-drift tool (mise run tooling:status / tooling:publish) compares each
+# with the latest release and opens a draft pull request for review when it
+# moves; its README documents this file.
+assignee: timmo001
+dispatch:
+  - build.yml
+  - lint-general.yml
+tools:
+  - repo: basecamp/omarchy
+    reviewed: v4.0.4
+    review: >-
+      Check that omarchy-launch-webapp keeps its name, its
+      ~/.local/share/omarchy/bin location and its <url> first argument
+      against the relaunch host and installer in src/native.
