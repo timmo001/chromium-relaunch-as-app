@@ -8,7 +8,7 @@ dispatch:
   - build.yml
   - lint-general.yml
 tools:
-  - repo: basecamp/omarchy
+  - repo: omacom/omarchy
     reviewed: v4.0.5
     review: >-
       Check that omarchy-launch-webapp keeps its name, its

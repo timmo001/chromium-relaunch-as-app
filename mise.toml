@@ -41,7 +41,7 @@ run = "tooling-drift status"
 [tasks."tooling:update"]
 description = "Record a tool release as reviewed in tooling.yml after reviewing it"
 usage = '''
-arg "<repo>" help="Tool repository, e.g. basecamp/omarchy"
+arg "<repo>" help="Tool repository, e.g. omacom/omarchy"
 arg "<tag>" help="Release tag, e.g. v4.0.4"
 '''
 run = "tooling-drift update $usage_repo $usage_tag"
