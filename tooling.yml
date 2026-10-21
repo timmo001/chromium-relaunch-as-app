@@ -9,7 +9,7 @@ dispatch:
   - lint-general.yml
 tools:
   - repo: omacom/omarchy
-    reviewed: v4.0.5
+    reviewed: v4.0.6
     review: >-
       Check that omarchy-launch-webapp keeps its name, its
       ~/.local/share/omarchy/bin location and its <url> first argument
