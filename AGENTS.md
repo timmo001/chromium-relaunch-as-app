@@ -1,3 +1,3 @@
 # Agent instructions
 
-- `tooling.yml` records the Omarchy release the native host was last reviewed against; the Tooling drift workflow opens a draft review pull request when it moves. After the review, move it with `mise run tooling:update <repo> <tag>`, never by hand; the `tooling-drift` skill has the steps.
+- `tooling.yml` records the Omarchy release the native host was last reviewed against; Upkeep's [`drift` job](https://upkeep.timmo.dev/running#drift) checks it for a newer release. Record a review by setting `reviewed` in `tooling.yml` and pushing.
