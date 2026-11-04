@@ -9,7 +9,7 @@ dispatch:
   - lint-general.yml
 tools:
   - repo: omacom/omarchy
-    reviewed: v4.5.0-rc2
+    reviewed: v4.5.0
     prereleases: true
     review: >-
       Check that omarchy-launch-webapp keeps its name, its
