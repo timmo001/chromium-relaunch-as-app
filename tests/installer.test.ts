@@ -42,6 +42,7 @@ describe("native host installer", () => {
           "chromium",
           "google-chrome",
           "BraveSoftware/Brave-Browser",
+          "BraveSoftware/Brave-Origin",
           "microsoft-edge",
           "vivaldi",
           "opera",

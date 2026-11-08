@@ -13,6 +13,7 @@ const browserDirectories = {
   chromium: "chromium/NativeMessagingHosts",
   chrome: "google-chrome/NativeMessagingHosts",
   brave: "BraveSoftware/Brave-Browser/NativeMessagingHosts",
+  "brave-origin": "BraveSoftware/Brave-Origin/NativeMessagingHosts",
   edge: "microsoft-edge/NativeMessagingHosts",
   vivaldi: "vivaldi/NativeMessagingHosts",
   opera: "opera/NativeMessagingHosts",
@@ -23,6 +24,7 @@ const browsers: ReadonlyArray<Browser> = [
   "chromium",
   "chrome",
   "brave",
+  "brave-origin",
   "edge",
   "vivaldi",
   "opera",
@@ -240,6 +242,7 @@ function parseArguments(args: ReadonlyArray<string>):
     case "chromium":
     case "chrome":
     case "brave":
+    case "brave-origin":
     case "edge":
     case "vivaldi":
     case "opera":
@@ -251,7 +254,7 @@ function parseArguments(args: ReadonlyArray<string>):
 }
 
 function usage(): string {
-  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|brave|edge|vivaldi|opera|helium|all]`;
+  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|brave|brave-origin|edge|vivaldi|opera|helium|all]`;
 }
 
 if (import.meta.main) {
