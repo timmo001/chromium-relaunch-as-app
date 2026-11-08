@@ -12,9 +12,17 @@ import {
 const browserDirectories = {
   chromium: "chromium/NativeMessagingHosts",
   chrome: "google-chrome/NativeMessagingHosts",
+  "chrome-beta": "google-chrome-beta/NativeMessagingHosts",
+  "chrome-unstable": "google-chrome-unstable/NativeMessagingHosts",
   brave: "BraveSoftware/Brave-Browser/NativeMessagingHosts",
+  "brave-beta": "BraveSoftware/Brave-Browser-Beta/NativeMessagingHosts",
+  "brave-nightly": "BraveSoftware/Brave-Browser-Nightly/NativeMessagingHosts",
   "brave-origin": "BraveSoftware/Brave-Origin/NativeMessagingHosts",
+  "brave-origin-beta": "BraveSoftware/Brave-Origin-Beta/NativeMessagingHosts",
+  "brave-origin-nightly":
+    "BraveSoftware/Brave-Origin-Nightly/NativeMessagingHosts",
   edge: "microsoft-edge/NativeMessagingHosts",
+  "edge-dev": "microsoft-edge-dev/NativeMessagingHosts",
   vivaldi: "vivaldi/NativeMessagingHosts",
   opera: "opera/NativeMessagingHosts",
   helium: "net.imput.helium/NativeMessagingHosts",
@@ -23,9 +31,16 @@ const browserDirectories = {
 const browsers: ReadonlyArray<Browser> = [
   "chromium",
   "chrome",
+  "chrome-beta",
+  "chrome-unstable",
   "brave",
+  "brave-beta",
+  "brave-nightly",
   "brave-origin",
+  "brave-origin-beta",
+  "brave-origin-nightly",
   "edge",
+  "edge-dev",
   "vivaldi",
   "opera",
   "helium",
@@ -241,9 +256,16 @@ function parseArguments(args: ReadonlyArray<string>):
     case "all":
     case "chromium":
     case "chrome":
+    case "chrome-beta":
+    case "chrome-unstable":
     case "brave":
+    case "brave-beta":
+    case "brave-nightly":
     case "brave-origin":
+    case "brave-origin-beta":
+    case "brave-origin-nightly":
     case "edge":
+    case "edge-dev":
     case "vivaldi":
     case "opera":
     case "helium":
@@ -254,7 +276,7 @@ function parseArguments(args: ReadonlyArray<string>):
 }
 
 function usage(): string {
-  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|brave|brave-origin|edge|vivaldi|opera|helium|all]`;
+  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|chrome-beta|chrome-unstable|brave|brave-beta|brave-nightly|brave-origin|brave-origin-beta|brave-origin-nightly|edge|edge-dev|vivaldi|opera|helium|all]`;
 }
 
 if (import.meta.main) {
