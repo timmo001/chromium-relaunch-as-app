@@ -25,7 +25,7 @@ Small Manifest V3 extension that launches the current page in an app window by c
    ./dist/install-native-host install chromium
    ```
 
-   Supported values: `chromium`, `chrome`, `brave`, `edge`, `vivaldi`, `all`
+   Supported values: `chromium`, `chrome`, `brave`, `edge`, `vivaldi`, `opera`, `helium`, `all`
 
 3. Open `chrome://extensions` or `chromium://extensions`.
 4. Enable Developer mode.
@@ -55,7 +55,7 @@ Remove it:
 ./dist/install-native-host uninstall chromium
 ```
 
-Use `all` instead of a browser name to target Chromium, Google Chrome, Brave, Microsoft Edge, and Vivaldi.
+Use `all` instead of a browser name to target Chromium, Google Chrome, Brave, Microsoft Edge, Vivaldi, Opera and Helium, the Chromium-based browsers `omarchy-launch-webapp` opens web apps in.
 
 ## Notes
 

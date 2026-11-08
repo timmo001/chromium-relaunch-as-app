@@ -15,6 +15,8 @@ const browserDirectories = {
   brave: "BraveSoftware/Brave-Browser/NativeMessagingHosts",
   edge: "microsoft-edge/NativeMessagingHosts",
   vivaldi: "vivaldi/NativeMessagingHosts",
+  opera: "opera/NativeMessagingHosts",
+  helium: "net.imput.helium/NativeMessagingHosts",
 } as const;
 
 const browsers: ReadonlyArray<Browser> = [
@@ -23,6 +25,8 @@ const browsers: ReadonlyArray<Browser> = [
   "brave",
   "edge",
   "vivaldi",
+  "opera",
+  "helium",
 ];
 
 type Browser = keyof typeof browserDirectories;
@@ -238,6 +242,8 @@ function parseArguments(args: ReadonlyArray<string>):
     case "brave":
     case "edge":
     case "vivaldi":
+    case "opera":
+    case "helium":
       return { help: false, action, browser };
     default:
       throw new Error(`Unsupported browser: ${browser}`);
@@ -245,7 +251,7 @@ function parseArguments(args: ReadonlyArray<string>):
 }
 
 function usage(): string {
-  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|brave|edge|vivaldi|all]`;
+  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|brave|edge|vivaldi|opera|helium|all]`;
 }
 
 if (import.meta.main) {

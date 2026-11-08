@@ -44,6 +44,8 @@ describe("native host installer", () => {
           "BraveSoftware/Brave-Browser",
           "microsoft-edge",
           "vivaldi",
+          "opera",
+          "net.imput.helium",
         ];
 
         for (const browser of browserDirectories) {
