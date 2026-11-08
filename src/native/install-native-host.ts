@@ -22,9 +22,13 @@ const browserDirectories = {
   "brave-origin-nightly":
     "BraveSoftware/Brave-Origin-Nightly/NativeMessagingHosts",
   edge: "microsoft-edge/NativeMessagingHosts",
+  "edge-beta": "microsoft-edge-beta/NativeMessagingHosts",
   "edge-dev": "microsoft-edge-dev/NativeMessagingHosts",
   vivaldi: "vivaldi/NativeMessagingHosts",
+  "vivaldi-snapshot": "vivaldi-snapshot/NativeMessagingHosts",
   opera: "opera/NativeMessagingHosts",
+  "opera-beta": "opera-beta/NativeMessagingHosts",
+  "opera-developer": "opera-developer/NativeMessagingHosts",
   helium: "net.imput.helium/NativeMessagingHosts",
 } as const;
 
@@ -40,9 +44,13 @@ const browsers: ReadonlyArray<Browser> = [
   "brave-origin-beta",
   "brave-origin-nightly",
   "edge",
+  "edge-beta",
   "edge-dev",
   "vivaldi",
+  "vivaldi-snapshot",
   "opera",
+  "opera-beta",
+  "opera-developer",
   "helium",
 ];
 
@@ -265,9 +273,13 @@ function parseArguments(args: ReadonlyArray<string>):
     case "brave-origin-beta":
     case "brave-origin-nightly":
     case "edge":
+    case "edge-beta":
     case "edge-dev":
     case "vivaldi":
+    case "vivaldi-snapshot":
     case "opera":
+    case "opera-beta":
+    case "opera-developer":
     case "helium":
       return { help: false, action, browser };
     default:
@@ -276,7 +288,7 @@ function parseArguments(args: ReadonlyArray<string>):
 }
 
 function usage(): string {
-  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|chrome-beta|chrome-unstable|brave|brave-beta|brave-nightly|brave-origin|brave-origin-beta|brave-origin-nightly|edge|edge-dev|vivaldi|opera|helium|all]`;
+  return `Usage: ${basename(process.argv[0] ?? "install-native-host")} [install|update|uninstall] [chromium|chrome|chrome-beta|chrome-unstable|brave|brave-beta|brave-nightly|brave-origin|brave-origin-beta|brave-origin-nightly|edge|edge-beta|edge-dev|vivaldi|vivaldi-snapshot|opera|opera-beta|opera-developer|helium|all]`;
 }
 
 if (import.meta.main) {

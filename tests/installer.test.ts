@@ -50,9 +50,13 @@ describe("native host installer", () => {
           "BraveSoftware/Brave-Origin-Beta",
           "BraveSoftware/Brave-Origin-Nightly",
           "microsoft-edge",
+          "microsoft-edge-beta",
           "microsoft-edge-dev",
           "vivaldi",
+          "vivaldi-snapshot",
           "opera",
+          "opera-beta",
+          "opera-developer",
           "net.imput.helium",
         ];
 
