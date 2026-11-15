@@ -1,0 +1,18 @@
+// Pre-push checks: the shared base from timmo001/workflows, plus the
+// extension's lint. Tests, types and the build are left to CI and `mise run
+// check`. Run the hook's steps by hand with `hk check --all`.
+amends "package://github.com/timmo001/workflows/releases/download/20261114.0/hk-base@20261114.0.0#/base.pkl"
+
+// Synced skills are owned by the skills repository, and .mise holds the lock
+// files mise writes for its pinned tools.
+exclude = List(".agents/skills", ".mise")
+
+hooks {
+  ["pre-push"] {
+    steps {
+      ["lint"] {
+        check = "mise run lint"
+      }
+    }
+  }
+}
