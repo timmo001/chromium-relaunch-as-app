@@ -15,6 +15,7 @@ export const BrowserTabStateSnapshot = Schema.Array(
 
 export class InvalidUrl extends Schema.TaggedError<InvalidUrl>()("InvalidUrl", {
   message: Schema.String,
+  cause: Schema.optional(Schema.Defect()),
 }) {}
 
 export const decodeLaunchUrl = Effect.fn("Protocol.decodeLaunchUrl")(function* (
@@ -25,9 +26,10 @@ export const decodeLaunchUrl = Effect.fn("Protocol.decodeLaunchUrl")(function* (
     input,
   ).pipe(
     Effect.mapError(
-      () =>
+      (cause) =>
         new InvalidUrl({
           message: "Request must include a non-empty url string",
+          cause,
         }),
     ),
   );
