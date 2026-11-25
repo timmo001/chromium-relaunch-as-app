@@ -28,7 +28,7 @@
     "@oxlint/plugins": "1.95.0",
     "@timmo001/oxlint-rules": "0.7.1",
     "@types/bun": "1.4.5",
-    "@types/chrome": "0.3.7",
+    "@types/chrome": "0.3.8",
     "oxlint": "1.95.0",
     "oxlint-tsgolint": "7.0.2008",
     "prettier": "3.10.1",
