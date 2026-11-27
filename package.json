@@ -30,7 +30,7 @@
     "@types/bun": "1.4.5",
     "@types/chrome": "0.3.8",
     "oxlint": "1.95.0",
-    "oxlint-tsgolint": "7.0.2008",
+    "oxlint-tsgolint": "7.0.2009",
     "prettier": "3.10.1",
     "typescript": "7.0.2",
     "vitest": "5.1.2"
