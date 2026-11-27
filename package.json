@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@effect/platform-bun": "4.1.7",
-    "effect": "4.1.6"
+    "effect": "4.1.7"
   },
   "devDependencies": {
     "@effect/tsgo": "0.73.7",
